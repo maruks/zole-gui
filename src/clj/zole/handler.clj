@@ -12,14 +12,14 @@
 (def loading-page
   (html5
    [:head
-     [:meta {:charset "utf-8"}]
-     [:meta {:name "viewport"
-             :content "width=device-width, initial-scale=1"}]
-     (include-css "/css/zole.css")
-     (include-css (if (env :dev) "/css/bootstrap.css" "/css/bootstrap.min.css"))]
-    [:body
-     mount-target
-     (include-js "/js/app.js")]))
+    [:meta {:charset "utf-8"}]
+    [:meta {:name "viewport"
+            :content "width=device-width, initial-scale=1"}]
+    (include-css "/css/zole.css")
+    (include-css (if (= "dev" (env :env)) "/css/bootstrap.css" "/css/bootstrap.min.css"))]
+   [:body
+    mount-target
+    (include-js "/js/app.js")]))
 
 
 (defroutes routes

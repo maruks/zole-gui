@@ -5,7 +5,8 @@
             [accountant.core :as accountant]
             [chord.client :refer [ws-ch]]
             [cljs.core.async :refer [<! >! put! close! chan timeout]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
+                   [zole.env :refer [cljs-env]]))
 
 (defonce app-state (atom {}))
 
@@ -188,7 +189,7 @@
            :about-page #'about-page
            :play-page #'play-page})
 
-(def ws-url "ws://192.168.1.8:8080/websocket")
+(def ws-url (cljs-env :ws-url))
 
 (defn table-joined [state]
   (swap! state assoc :joined true)
