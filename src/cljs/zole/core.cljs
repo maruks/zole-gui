@@ -161,7 +161,7 @@
         username      (:username @state)]
     [:div.container-fluid
      [:div.row.top-buffer.table-row
-      [:div.col-md-2.align-center [:p second-player] [:p (game-type second-player (:game-type page))]]
+      [:div.col-md-2.align-center [:p.thick second-player] [:p (game-type second-player (:game-type page))]]
       [:div.col-md-1]
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get second-player))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
@@ -170,7 +170,7 @@
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get first-player))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
       [:div.col-md-1]
-      [:div.col-md-2.align-center [:p first-player] [:p (game-type first-player (:game-type page))]]]
+      [:div.col-md-2.align-center [:p.thick first-player] [:p (game-type first-player (:game-type page))]]]
      [:div.row.top-buffer
       [:div.col-md-1]
       [cards crds state]
@@ -201,9 +201,10 @@
 
 (defn end-of-game [state msg]
   (let [[_ num tricks points score total] msg
-        update-fn (fn [arg] (partial cons (assoc (into {} arg) "num" num)))]
-    (swap! state update-in [:play-page :tricks] (update-fn tricks))
-    (swap! state update-in [:play-page :points] (update-fn points))
+        tricks-map                        (into {} tricks)
+        points-tricks                     (map (fn [[player pts]] [player (str pts " (" (tricks-map player) ")")]) points)
+        update-fn                         (fn [arg] (partial cons (assoc (into {} arg) "num" num)))]
+    (swap! state update-in [:play-page :points] (update-fn points-tricks))
     (swap! state update-in [:play-page :score] (update-fn score))
     (swap! state assoc-in [:play-page :total] (into {} total))
     (swap! state assoc-in [:play-page :game-type] nil)))

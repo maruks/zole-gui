@@ -29,6 +29,10 @@
 
 .with-padding {padding: 7px; margin: 7px;}
 
+p.thick {
+    font-weight: bold;
+}
+
 div#preloaded-images {
    position: absolute;
    overflow: hidden;
