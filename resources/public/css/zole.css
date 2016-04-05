@@ -8,6 +8,32 @@
 
 .prompt-row {height: 80px; }
 
-.cards-div {height: 140px; text-align:center}
+.cards-div {
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    height: 140px;
+    text-align: center;}
+
+.card-div {
+    display: inline-block;
+    height: 140px;
+    width: 110px;
+    /* For IE 7 */
+    zoom: 1;
+    *display: inline;}
+
+.card {
+    height: 140px;
+    width: 110px;}
 
 .with-padding {padding: 7px; margin: 7px;}
+
+div#preloaded-images {
+   position: absolute;
+   overflow: hidden;
+   left: -9999px;
+   top: -9999px;
+   height: 1px;
+   width: 1px;
+}

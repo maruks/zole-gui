@@ -106,7 +106,7 @@
   (let [playfn  (get-playfn state)]
     [:div.col-md-10.cards-div
      (for [[r s] crds]
-       ^{:key (str r s)} [:img.card {:src (str "/images/" r "_of_" s ".svg") :height "140" :width "120" :on-click #(playfn r s)}])]))
+       ^{:key (str r s)} [:div.card-div [:img.card {:src (str "/images/" r "_of_" s ".svg") :on-click #(playfn r s)}]])]))
 
 (defn game-type [player game-type-msg]
   (when-let [t (first game-type-msg)]
@@ -241,7 +241,7 @@
         (when message
           (handle-message state message)
           (when (= (first message) "plays")
-            (<! (timeout 1500))))
+            (<! (timeout 1100))))
         (handle-error state error))
       (if msg
         (recur)
