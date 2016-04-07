@@ -94,7 +94,8 @@
                               :css-dirs ["resources/public/css"]
                               :ring-handler zole.handler/app}
 
-                   :env {:dev true}
+                   :env {:env "dev"
+                         :ws-url "ws://192.168.1.8:8080/websocket"}
 
                    :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]
                                               :compiler {:main "zole.dev"
@@ -103,7 +104,8 @@
              :uberjar {:hooks [minify-assets.plugin/hooks]
                        :source-paths ["env/prod/clj"]
                        :prep-tasks ["compile" ["cljsbuild" "once"]]
-                       :env {:production true}
+                       :env {:env "prod"
+                             :ws-url "ws://maruks.homenet.org:8080/websocket"}
                        :aot :all
                        :omit-source true
                        :cljsbuild {:jar true

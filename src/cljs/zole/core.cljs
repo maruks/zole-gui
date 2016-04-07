@@ -5,7 +5,8 @@
             [accountant.core :as accountant]
             [chord.client :refer [ws-ch]]
             [cljs.core.async :refer [<! >! put! close! chan timeout]])
-  (:require-macros [cljs.core.async.macros :refer [go go-loop]]))
+  (:require-macros [cljs.core.async.macros :refer [go go-loop]]
+                   [zole.env :refer [cljs-env]]))
 
 (defonce app-state (atom {}))
 
@@ -105,7 +106,7 @@
   (let [playfn  (get-playfn state)]
     [:div.col-md-10.cards-div
      (for [[r s] crds]
-       ^{:key (str r s)} [:img.card {:src (str "/images/" r "_of_" s ".svg") :height "140" :width "120" :on-click #(playfn r s)}])]))
+       ^{:key (str r s)} [:div.card-div [:img.card {:src (str "/images/" r "_of_" s ".svg") :on-click #(playfn r s)}]])]))
 
 (defn game-type [player game-type-msg]
   (when-let [t (first game-type-msg)]
@@ -160,7 +161,7 @@
         username      (:username @state)]
     [:div.container-fluid
      [:div.row.top-buffer.table-row
-      [:div.col-md-2.align-center [:p second-player] [:p (game-type second-player (:game-type page))]]
+      [:div.col-md-2.align-center [:p.thick second-player] [:p (game-type second-player (:game-type page))]]
       [:div.col-md-1]
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get second-player))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
@@ -169,7 +170,7 @@
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get first-player))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
       [:div.col-md-1]
-      [:div.col-md-2.align-center [:p first-player] [:p (game-type first-player (:game-type page))]]]
+      [:div.col-md-2.align-center [:p.thick first-player] [:p (game-type first-player (:game-type page))]]]
      [:div.row.top-buffer
       [:div.col-md-1]
       [cards crds state]
@@ -188,7 +189,7 @@
            :about-page #'about-page
            :play-page #'play-page})
 
-(def ws-url "ws://192.168.1.8:8080/websocket")
+(def ws-url (cljs-env :ws-url))
 
 (defn table-joined [state]
   (swap! state assoc :joined true)
@@ -200,9 +201,10 @@
 
 (defn end-of-game [state msg]
   (let [[_ num tricks points score total] msg
-        update-fn (fn [arg] (partial cons (assoc (into {} arg) "num" num)))]
-    (swap! state update-in [:play-page :tricks] (update-fn tricks))
-    (swap! state update-in [:play-page :points] (update-fn points))
+        tricks-map                        (into {} tricks)
+        points-tricks                     (map (fn [[player pts]] [player (str pts " (" (tricks-map player) ")")]) points)
+        update-fn                         (fn [arg] (partial cons (assoc (into {} arg) "num" num)))]
+    (swap! state update-in [:play-page :points] (update-fn points-tricks))
     (swap! state update-in [:play-page :score] (update-fn score))
     (swap! state assoc-in [:play-page :total] (into {} total))
     (swap! state assoc-in [:play-page :game-type] nil)))
@@ -240,7 +242,7 @@
         (when message
           (handle-message state message)
           (when (= (first message) "plays")
-            (<! (timeout 1500))))
+            (<! (timeout 1100))))
         (handle-error state error))
       (if msg
         (recur)
