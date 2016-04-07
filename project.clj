@@ -95,7 +95,7 @@
                               :ring-handler zole.handler/app}
 
                    :env {:env "dev"
-                         :ws-url "ws://192.168.1.8:8080/websocket"}
+                         :ws-url "ws://maruks.homenet.org:8080/websocket"}
 
                    :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]
                                               :compiler {:main "zole.dev"

@@ -106,7 +106,7 @@
   (let [playfn  (get-playfn state)]
     [:div.col-md-10.cards-div
      (for [[r s] crds]
-       ^{:key (str r s)} [:div.card-div [:img.card {:src (str "/images/" r "_of_" s ".svg") :on-click #(playfn r s)}]])]))
+       ^{:key (str r s)} [:div.card-div [:img.card {:src (str "/images/" r "_of_" s ".png") :on-click #(playfn r s)}]])]))
 
 (defn game-type [player game-type-msg]
   (when-let [t (first game-type-msg)]
@@ -164,11 +164,11 @@
       [:div.col-md-2.align-center [:p.thick second-player] [:p (game-type second-player (:game-type page))]]
       [:div.col-md-1]
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get second-player))]
-                                    [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
+                                    [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".png")}])]
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get username))]
-                                    [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
+                                    [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".png")}])]
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get first-player))]
-                                    [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".svg") :height "140" :width "120"}])]
+                                    [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".png")}])]
       [:div.col-md-1]
       [:div.col-md-2.align-center [:p.thick first-player] [:p (game-type first-player (:game-type page))]]]
      [:div.row.top-buffer
