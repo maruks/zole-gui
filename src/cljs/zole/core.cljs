@@ -214,6 +214,7 @@
   (cond
     (= msg ["ok" "login"]) (swap! state assoc :loggedin true)
     (= msg ["ok" "join"]) (table-joined state)
+    (= msg ["ok" "save"]) (swap! state assoc-in [:play-page :saved] nil)
     (= (first msg) "cards") (swap! state assoc-in [:play-page :cards] (second msg))
     (= (first msg) "players") (swap! state assoc-in [:play-page :players] (second msg))
     (= (first msg) "prompt") (swap! state assoc-in [:play-page :prompt] (second msg))
