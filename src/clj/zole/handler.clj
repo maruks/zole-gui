@@ -42,7 +42,7 @@
     [:meta {:charset "utf-8"}]
     [:meta {:name "viewport"
             :content "width=device-width, initial-scale=1"}]
-    (include-css "/css/zole.css")
+    (include-css (if (= "dev" (env :env)) "/css/zole.css" "/css/zole.min.css"))
     (include-css (if (= "dev" (env :env)) "/css/bootstrap.css" "/css/bootstrap.min.css"))]
    [:body
     mount-target

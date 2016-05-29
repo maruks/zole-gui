@@ -43,7 +43,7 @@
 
   :minify-assets
   {:assets
-   {"resources/public/css/site.min.css" "resources/public/css/zole.css"}}
+   {"resources/public/css/zole.min.css" "resources/public/css/zole.css"}}
 
   :cljsbuild {:builds {:app {:source-paths ["src/cljs" "src/cljc"]
                              :compiler {:output-to "target/cljsbuild/public/js/app.js"
@@ -95,7 +95,7 @@
                               :ring-handler zole.handler/app}
 
                    :env {:env "dev"
-                         :ws-url "ws://maruks.homenet.org:8080/websocket"}
+                         :ws-url "ws://localhost:8080/websocket"}
 
                    :cljsbuild {:builds {:app {:source-paths ["env/dev/cljs"]
                                               :compiler {:main "zole.dev"

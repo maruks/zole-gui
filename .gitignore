@@ -13,4 +13,5 @@ pom.xml.asc
 .nrepl-port
 .lein-env
 *.log
+*.min.css
 .cljs_rhino_repl
