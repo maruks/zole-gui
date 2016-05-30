@@ -3,6 +3,8 @@
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [accountant.core :as accountant]
+            [goog.string :as gstring]
+            [goog.string.format]
             [chord.client :refer [ws-ch]]
             [cljs.core.async :refer [<! >! put! close! chan timeout]])
   (:require-macros [cljs.core.async.macros :refer [go go-loop]]
@@ -189,7 +191,7 @@
            :about-page #'about-page
            :play-page #'play-page})
 
-(def ws-url (cljs-env :ws-url))
+(def ws-port (cljs-env :ws-port))
 
 (defn table-joined [state]
   (swap! state assoc :joined true)
@@ -259,9 +261,13 @@
 (defn connection-error [state error]
   (error-alert state (str "Couldn't connect to server " error)))
 
+(defn ws-url []
+  (println js/window.location.hostname)
+  (gstring/format "ws://%s:%s/websocket" js/window.location.hostname ws-port))
+
 (defn connect! [state on-connect-fn]
   (go
-    (let [{:keys [ws-channel error]} (<! (ws-ch ws-url {:format :json}))]
+    (let [{:keys [ws-channel error]} (<! (ws-ch (ws-url) {:format :json}))]
       (if-not error
         (connected state ws-channel on-connect-fn)
         (connection-error state error)))))
