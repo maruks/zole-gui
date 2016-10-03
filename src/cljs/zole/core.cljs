@@ -3,6 +3,7 @@
             [reagent.session :as session]
             [secretary.core :as secretary :include-macros true]
             [accountant.core :as accountant]
+            [clojure.string :refer [blank?]]
             [goog.string :as gstring]
             [goog.string.format]
             [chord.client :refer [ws-ch]]
@@ -27,7 +28,7 @@
        [:ul.nav.navbar-nav
         [:li (when (= current-page :home-page) {:class "active"})
          [:a {:href "/"} "Home"]]
-        [:li
+        [:li (when (= current-page :-page) {:class "active"})
          [:a {:href "/tables"} "Tables"]]
         [:li (when (= current-page :play-page) {:class "active"})
          [:a {:href "/play"} "Play"]]
@@ -36,14 +37,25 @@
 
 (declare connect!)
 
-(defn play-against-bots [state]
+(defn do-join-table [state name]
+  (go (>! (:ws-chan @state) ["join" name])))
+
+(defn create-table [state prefix]
+  (let [name (str prefix "-table-" (str (random-uuid)))]
+    (swap! state assoc :tablename name)
+    (do-join-table state name)))
+
+(defn join-table [state name]
+  (swap! state assoc :tablename name)
+  (do-join-table state name))
+
+(defn leave-table [state]
+  (let [ws-chan (:ws-chan @state)]
+    (go (>! ws-chan ["leave"]))))
+
+(defn user-login [state]
   (connect! state (fn [s ws-chan]
-                    (let [name  (str "player-" (str (random-uuid)))
-                          table (str "pvb-table-" (str (random-uuid)))]
-                      (swap! s assoc :username name)
-                      (swap! s assoc :tablename table)
-                      (go (>! ws-chan ["login" name])
-                          (>! ws-chan ["join" table]))))))
+                    (go (>! ws-chan ["login" (:username @state)])))))
 
 ;; -------------------------
 ;; Views
@@ -55,18 +67,15 @@
     [:div.container
      [:div.row
       [:div.col-md-6
-       [:h2 "Welcome to zole"]
-       [:p "Please login to play against other users"]]]
+       [:h2 "Welcome to zole"]]]
      [:div.row
       [:div.col-md-6
        [:form
         [:div.form-group
          [:label {:for "username"} "Username"]
-         [:input#username.form-control {:disabled "disabled" :placeholder "Username"}]]
+         [:input#username.form-control {:placeholder "Username" :on-change #(swap! app-state assoc :username (-> % .-target .-value))}]]
         [:div.form-group
-         [:button.btn.btn-default {:disabled "disabled" :type "button"} "Login"]]
-        [:div.form-group
-         [:button.btn.btn-default {:type "button" :on-click #(play-against-bots app-state)} "Play against computer"]]
+         [:button.btn.btn-default (cond-> {:type "button" :on-click #(user-login app-state)} (blank? (:username @app-state)) (assoc :disabled "disabled")) "Login"]]
         [:div.form-group
          [:div.alert.alert-danger {:class alert-hidden}
           [:strong "Error "] alert]]]]]]))
@@ -153,6 +162,35 @@
                              [:td (p player1)]
                              [:td (p player2)]])]])))
 
+(defn tables-page [app-state]
+  (let [{:keys [joined] :as state} @app-state
+        _ (println (-> state :tables-page :tables))]
+    [:div.container
+     [:div.row
+      [:div.col-md-6
+       [:div.panel.panel-default
+        [:div.panel-heading [:h3 "Tables"]]
+        [:div.panel-body
+         [:form
+          [:div.form-group
+           (if joined
+             [:div
+              [:span "You have joined a table"]
+              [:button.btn.btn-default {:type "button" :on-click #(leave-table app-state)} "Leave"]]
+             [:div
+              [:button.btn.btn-default {:type "button" :on-click #(create-table app-state "pvb")} "Play against computer"]
+              [:button.btn.btn-default {:type "button" :on-click #(create-table app-state "ffa")} "Create table"]])]]
+         (when (seq (-> state :tables-page :tables))
+           [:table.table.table-hover
+            [:thead
+             [:tr [:td "Players"] (when-not joined [:td "Join"])]]
+            [:tbody
+             (for [table (-> state :tables-page :tables)]
+               [:tr {:key (:name table)}
+                [:td (:players table)]
+                (when-not joined
+                  [:td [:button.btn.btn-primary.btn-xs {:type "button" :on-click #(join-table app-state (:name table))} "Join"]])])]])]]]]]))
+
 (defn play-page [state]
   (let [page          (:play-page @state)
         ws-chan       (:ws-chan @state)
@@ -189,12 +227,19 @@
 
 (def page {:home-page #'home-page
            :about-page #'about-page
+           :tables-page #'tables-page
            :play-page #'play-page})
 
 (def ws-port (cljs-env :ws-port))
 
 (defn table-joined [state]
-  (swap! state assoc :joined true)
+  (swap! state assoc :joined true))
+
+(defn table-left [state]
+  (swap! state assoc :joined false))
+
+(defn start-game [state players]
+  (swap! state assoc-in [:play-page :players] players)
   (session/put! :current-page :play-page))
 
 (defn plays [state msg]
@@ -211,14 +256,26 @@
     (swap! state assoc-in [:play-page :total] (into {} total))
     (swap! state assoc-in [:play-page :game-type] nil)))
 
+(defn error-alert [state alert]
+    (swap! state assoc :home-page {:error true :alert alert}))
+
+(defn logged-in [state]
+  (swap! state assoc :loggedin true)
+  (go (>! (:ws-chan @state) ["tables"])))
+
 (defn handle-message [state msg]
   (println "message" msg)
   (cond
-    (= msg ["ok" "login"]) (swap! state assoc :loggedin true)
+    (= msg ["ok" "login"]) (logged-in state)
     (= msg ["ok" "join"]) (table-joined state)
+    (= msg ["ok" "leave"]) (table-left state)
+    (= msg ["ok" "tables"]) (session/put! :current-page :tables-page)
     (= msg ["ok" "save"]) (swap! state assoc-in [:play-page :saved] nil)
+    (= msg ["error" "already_registered" "login"]) (error-alert state (gstring/format "Username '%s' is already taken." (:username @state)))
+    (= (first msg) "tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) (second msg))))
+    (= (first msg) "open_tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) (second msg))))
     (= (first msg) "cards") (swap! state assoc-in [:play-page :cards] (second msg))
-    (= (first msg) "players") (swap! state assoc-in [:play-page :players] (second msg))
+    (= (first msg) "players") (start-game state (second msg))
     (= (first msg) "prompt") (swap! state assoc-in [:play-page :prompt] (second msg))
     (= (first msg) "plays") (plays state msg)
     (= (first msg) "wins") (swap! state assoc-in [:play-page :plays] {})
@@ -228,9 +285,6 @@
 
 (defn handle-error [state err]
   (println "error " err))
-
-(defn error-alert [state alert]
-    (swap! state assoc :home-page {:error true :alert alert}))
 
 (defn disconnected [state]
   (println "disconnected")

@@ -16,7 +16,7 @@
                  [environ "1.0.2"]
                  [jarohen/chord "0.7.0"]
                  [cljsjs/bootstrap "3.3.6-0"]
-                 [org.clojure/clojurescript "1.8.34" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.229" :scope "provided"]
                  [secretary "1.2.3"]
                  [venantius/accountant "0.1.7" :exclusions [org.clojure/tools.reader]]]
 
@@ -59,7 +59,7 @@
                    :dependencies [[ring/ring-mock "0.3.0"]
                                   [ring/ring-devel "1.4.0"]
                                   [prone "1.1.0"]
-                                  [lein-figwheel "0.5.1"
+                                  [lein-figwheel "0.5.8"
                                    :exclusions [org.clojure/core.memoize
                                                 ring/ring-core
                                                 org.clojure/clojure
@@ -74,7 +74,7 @@
                                   [pjstadig/humane-test-output "0.8.0"]]
 
                    :source-paths ["env/dev/clj"]
-                   :plugins [[lein-figwheel "0.5.1"
+                   :plugins [[lein-figwheel "0.5.8"
                               :exclusions [org.clojure/core.memoize
                                            ring/ring-core
                                            org.clojure/clojure

@@ -41,3 +41,8 @@ div#preloaded-images {
    height: 1px;
    width: 1px;
 }
+
+.btn {
+    margin-right: 5px;
+    margin-left: 5px;
+}
