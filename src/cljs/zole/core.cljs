@@ -26,11 +26,7 @@
        [:a.navbar-brand "Zole"]]
       [:div#navbar.navbar-collapse.collapse
        [:ul.nav.navbar-nav
-        [:li (when (= current-page :home-page) {:class "active"})
-         [:a {:href "/"} "Home"]]
-        [:li (when (= current-page :-page) {:class "active"})
-         [:a {:href "/tables"} "Tables"]]
-        [:li (when (= current-page :play-page) {:class "active"})
+        [:li (when (#{:home-page :tables-page :play-page} current-page) {:class "active"})
          [:a {:href "/play"} "Play"]]
         [:li (when (= current-page :about-page) {:class "active"})
          [:a {:href "/about"} "About"]]]]]]))
@@ -84,19 +80,35 @@
   [:div.container
    [:div.row
     [:div.col-md-4
-     [:h2 "About zole"]]]])
+     [:h2 "About zole"]
+     [:span "This is open source implementation of card game "] [:a {:target "_blank" :href "https://en.wikipedia.org/wiki/Zole"} "zole."]]]])
 
-(defn prompt-panel [page ws-chan]
+(defn back-to-tables [state ws-chan]
+  (swap! state merge {:tables-page {}
+                      :play-page {}
+                      :joined false})
+  (go (>! ws-chan ["tables"])))
+
+(defn logout [ws-chan]
+  (go (>! ws-chan ["logout"])))
+
+(defn prompt-panel [state page ws-chan]
   (let [prompt (:prompt page)
         p      (if (coll? prompt) (first prompt) prompt)]
     [:div.col-md-6.align-center
      (condp = p
        "choose" [:p (str "#" (second prompt))
-                 [:button.btn.btn-primary.btn-lg.with-padding {:type "button" :on-click #(go (>! ws-chan ["lielais"]))} "Lielais"]
-                 [:button.btn.btn-primary.btn-lg.with-padding {:type "button" :on-click #(go (>! ws-chan ["zole"]))} "Zole"]
-                 [:button.btn.btn-primary.btn-lg.with-padding {:type "button" :on-click #(go (>! ws-chan ["pass"]))} "Pass"]]
+                 [:button.btn.btn-primary.btn-lg {:type "button" :on-click #(go (>! ws-chan ["lielais"]))} "Lielais"]
+                 [:button.btn.btn-primary.btn-lg {:type "button" :on-click #(go (>! ws-chan ["zole"]))} "Zole"]
+                 [:button.btn.btn-primary.btn-lg {:type "button" :on-click #(go (>! ws-chan ["pass"]))} "Pass"]]
        "save" [:div {:class "alert alert-info"} (if (:saved page) "Choose second card to save!" "Choose two cards to save!")]
-       "play" [:div {:class "alert alert-info"} "Your turn to play!"]
+       "play" [:div {:class "alert alert-info"} "Your turn to play!"
+               (when-not (:last-game page)
+                 [:button.btn.btn-primary {:type "button" :on-click #(go (>! ws-chan ["last_game"]))} "Last game"])]
+       :table-closed [:div {:class "alert alert-info"} "Table closed"
+                      [:p
+                       [:button.btn.btn-primary.btn-lg {:type "button" :on-click #(back-to-tables state ws-chan)} "Tables"]
+                       [:button.btn.btn-primary.btn-lg {:type "button" :on-click #(logout ws-chan)} "Logout"]]]
        [:p])]))
 
 (defn get-playfn [app-state]
@@ -163,8 +175,7 @@
                              [:td (p player2)]])]])))
 
 (defn tables-page [app-state]
-  (let [{:keys [joined] :as state} @app-state
-        _ (println (-> state :tables-page :tables))]
+  (let [{:keys [joined] :as state} @app-state]
     [:div.container
      [:div.row
       [:div.col-md-6
@@ -192,32 +203,31 @@
                   [:td [:button.btn.btn-primary.btn-xs {:type "button" :on-click #(join-table app-state (:name table))} "Join"]])])]])]]]]]))
 
 (defn play-page [state]
-  (let [page          (:play-page @state)
-        ws-chan       (:ws-chan @state)
-        crds          (:cards page)
-        players       (:players page)
-        first-player  (first players)
-        second-player (second players)
-        username      (:username @state)]
+  (let [page                         (:play-page @state)
+        ws-chan                      (:ws-chan @state)
+        crds                         (:cards page)
+        players                      (:players page)
+        [first-player second-player] players
+        username                     (:username @state)]
     [:div.container-fluid
      [:div.row.top-buffer.table-row
-      [:div.col-md-2.align-center [:p.thick second-player] [:p (game-type second-player (:game-type page))]]
+      [:div.col-md-2.align-center [:p.thick first-player] [:p (game-type first-player (:game-type page))]]
       [:div.col-md-1]
-      [:div.col-md-2.align-center (when-let [card (some-> page :plays (get second-player))]
+      [:div.col-md-2.align-center (when-let [card (some-> page :plays (get first-player))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".png")}])]
       [:div.col-md-2.align-center (when-let [card (some-> page :plays (get username))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".png")}])]
-      [:div.col-md-2.align-center (when-let [card (some-> page :plays (get first-player))]
+      [:div.col-md-2.align-center (when-let [card (some-> page :plays (get second-player))]
                                     [:img.card {:src (str "/images/" (first card) "_of_" (second card) ".png")}])]
       [:div.col-md-1]
-      [:div.col-md-2.align-center [:p.thick first-player] [:p (game-type first-player (:game-type page))]]]
+      [:div.col-md-2.align-center [:p.thick second-player] [:p (game-type second-player (:game-type page))]]]
      [:div.row.top-buffer
       [:div.col-md-1]
       [cards crds state]
       [:div.col-md-1]]
      [:div.row.top-buffer.prompt-row
       [:div.col-md-3]
-      [prompt-panel page ws-chan]
+      [prompt-panel state page ws-chan]
       [:div.col-md-3]]
      [:div.row.top-buffer
       [:div.col-md-6
@@ -226,9 +236,9 @@
        [points-table page username]]]]))
 
 (def page {:home-page #'home-page
-           :about-page #'about-page
            :tables-page #'tables-page
-           :play-page #'play-page})
+           :play-page #'play-page
+           :about-page #'about-page})
 
 (def ws-port (cljs-env :ws-port))
 
@@ -242,8 +252,8 @@
   (swap! state assoc-in [:play-page :players] players)
   (session/put! :current-page :play-page))
 
-(defn plays [state msg]
-  (swap! state assoc-in [:play-page :plays (fnext msg)] (first (second (rest msg))))
+(defn plays [state [_ player [card]]]
+  (swap! state assoc-in [:play-page :plays player] card)
   (swap! state assoc-in [:play-page :prompt] nil))
 
 (defn end-of-game [state msg]
@@ -263,14 +273,24 @@
   (swap! state assoc :loggedin true)
   (go (>! (:ws-chan @state) ["tables"])))
 
+(defn logged-out [state]
+  (reset! state {})
+  (session/put! :current-page :home-page))
+
 (defn handle-message [state msg]
   (println "message" msg)
   (cond
     (= msg ["ok" "login"]) (logged-in state)
+    (= msg ["ok" "logout"]) (logged-out state)
     (= msg ["ok" "join"]) (table-joined state)
     (= msg ["ok" "leave"]) (table-left state)
+    (= msg ["ok" "last_game"]) (swap! state assoc-in [:play-page :last-game] true)
+    (or (= msg ["ok" "lielais"])
+        (= msg ["ok" "zole"])
+        (= msg ["ok" "pass"])) (swap! state assoc-in [:play-page :prompt] nil)
     (= msg ["ok" "tables"]) (session/put! :current-page :tables-page)
-    (= msg ["ok" "save"]) (swap! state assoc-in [:play-page :saved] nil)
+    (= msg ["ok" "save"]) (do (swap! state assoc-in [:play-page :saved] nil)
+                              (swap! state assoc-in [:play-page :prompt] nil))
     (= msg ["error" "already_registered" "login"]) (error-alert state (gstring/format "Username '%s' is already taken." (:username @state)))
     (= (first msg) "tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) (second msg))))
     (= (first msg) "open_tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) (second msg))))
@@ -280,6 +300,7 @@
     (= (first msg) "plays") (plays state msg)
     (= (first msg) "wins") (swap! state assoc-in [:play-page :plays] {})
     (= (first msg) "game_type") (swap! state assoc-in [:play-page :game-type] (rest msg))
+    (= (first msg) "table_closed") (swap! state assoc-in [:play-page :prompt] :table-closed)
     (= (first msg) "end_of_game") (end-of-game state msg)
     :else (println "unknown message" msg)))
 
@@ -337,8 +358,16 @@
 (secretary/defroute "/" []
   (session/put! :current-page :home-page))
 
+(secretary/defroute "/play" []
+  (let [current-page (session/get :current-page)]
+    (when (= current-page :about-page)
+      (let [goto-page (or (session/get :previous-page) :home-page)]
+        (session/put! :current-page goto-page)))))
+
 (secretary/defroute "/about" []
-  (session/put! :current-page :about-page))
+  (let [current-page (session/get :current-page)]
+    (session/put! :previous-page current-page)
+    (session/put! :current-page :about-page)))
 
 ;; -------------------------
 ;; Initialize app
