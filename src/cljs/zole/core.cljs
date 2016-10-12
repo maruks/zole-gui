@@ -13,7 +13,7 @@
 
 (defonce app-state (atom {}))
 
-(defn nav-bar [_]
+(defn nav-bar [state]
   (let [current-page (session/get :current-page)]
     [:nav.navbar.navbar-default.navbar-static-top
      [:div.container
@@ -29,7 +29,9 @@
         [:li (when (#{:home-page :tables-page :play-page} current-page) {:class "active"})
          [:a {:href "/play"} "Play"]]
         [:li (when (= current-page :about-page) {:class "active"})
-         [:a {:href "/about"} "About"]]]]]]))
+         [:a {:href "/about"} "About"]]]
+       (when (:loggedin @state)
+         [:p.navbar-text.navbar-right (str "Signed in as " (:username @state))])]]]))
 
 (declare connect!)
 
@@ -73,8 +75,7 @@
         [:div.form-group
          [:button.btn.btn-default (cond-> {:type "button" :on-click #(user-login app-state)} (blank? (:username @app-state)) (assoc :disabled "disabled")) "Login"]]
         [:div.form-group
-         [:div.alert.alert-danger {:class alert-hidden}
-          [:strong "Error "] alert]]]]]]))
+         [:div.alert.alert-danger {:class alert-hidden} alert]]]]]]))
 
 (defn about-page [_]
   [:div.container
@@ -277,31 +278,39 @@
   (reset! state {})
   (session/put! :current-page :home-page))
 
-(defn handle-message [state msg]
+(defn last-game [state]
+  (swap! state assoc-in [:play-page :last-game] true))
+
+(defn handle-message [state [m1 m2 :as msg]]
   (println "message" msg)
   (cond
-    (= msg ["ok" "login"]) (logged-in state)
-    (= msg ["ok" "logout"]) (logged-out state)
-    (= msg ["ok" "join"]) (table-joined state)
-    (= msg ["ok" "leave"]) (table-left state)
-    (= msg ["ok" "last_game"]) (swap! state assoc-in [:play-page :last-game] true)
-    (or (= msg ["ok" "lielais"])
-        (= msg ["ok" "zole"])
-        (= msg ["ok" "pass"])) (swap! state assoc-in [:play-page :prompt] nil)
-    (= msg ["ok" "tables"]) (session/put! :current-page :tables-page)
-    (= msg ["ok" "save"]) (do (swap! state assoc-in [:play-page :saved] nil)
-                              (swap! state assoc-in [:play-page :prompt] nil))
+    (= m1 "ok") (cond
+                  (= m2 "login") (logged-in state)
+                  (= m2 "logout") (logged-out state)
+                  (= m2 "join") (table-joined state)
+                  (= m2 "leave") (table-left state)
+                  (= m2 "last_game") (last-game state)
+                  (or (= m2 "lielais")
+                      (= m2 "zole")
+                      (= m2 "pass")) (swap! state assoc-in [:play-page :prompt] nil)
+                  (= m2 "tables") (session/put! :current-page :tables-page)
+                  (= m2 "save") (do (swap! state assoc-in [:play-page :saved] nil)
+                                    (swap! state assoc-in [:play-page :prompt] nil)))
+
+    (= m1 "tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) m2)))
+    (= m1 "open_tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) m2)))
+    (= m1 "cards") (swap! state assoc-in [:play-page :cards] m2)
+    (= m1 "players") (start-game state m2)
+    (= m1 "last_game") (last-game state)
+    (= m1 "prompt") (swap! state assoc-in [:play-page :prompt] m2)
+    (= m1 "plays") (plays state msg)
+    (= m1 "wins") (swap! state assoc-in [:play-page :plays] {})
+    (= m1 "game_type") (swap! state assoc-in [:play-page :game-type] (rest msg))
+    (= m1 "table_closed") (swap! state assoc-in [:play-page :prompt] :table-closed)
+    (= m1 "end_of_game") (end-of-game state msg)
+
     (= msg ["error" "already_registered" "login"]) (error-alert state (gstring/format "Username '%s' is already taken." (:username @state)))
-    (= (first msg) "tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) (second msg))))
-    (= (first msg) "open_tables") (swap! state assoc-in [:tables-page :tables] (sort-by :name (map (fn [[table players]] {:name table :players (apply str (interpose \, players))}) (second msg))))
-    (= (first msg) "cards") (swap! state assoc-in [:play-page :cards] (second msg))
-    (= (first msg) "players") (start-game state (second msg))
-    (= (first msg) "prompt") (swap! state assoc-in [:play-page :prompt] (second msg))
-    (= (first msg) "plays") (plays state msg)
-    (= (first msg) "wins") (swap! state assoc-in [:play-page :plays] {})
-    (= (first msg) "game_type") (swap! state assoc-in [:play-page :game-type] (rest msg))
-    (= (first msg) "table_closed") (swap! state assoc-in [:play-page :prompt] :table-closed)
-    (= (first msg) "end_of_game") (end-of-game state msg)
+
     :else (println "unknown message" msg)))
 
 (defn handle-error [state err]
