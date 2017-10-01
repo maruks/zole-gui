@@ -18,7 +18,7 @@
                  [cljsjs/bootstrap "3.3.6-0"]]
 
   :plugins [[lein-figwheel "0.5.13"]
-            [lein-cljsbuild "1.1.4" :exclusions [[org.clojure/clojure]]]
+            [lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
             [lein-asset-minifier "0.2.7" :exclusions [org.clojure/clojure]]]
 
   :minify-assets
@@ -56,7 +56,7 @@
   :figwheel {:css-dirs ["resources/public/css"]}
 
   :profiles {:dev {:dependencies [[binaryage/devtools "0.9.4"]
-                                  [figwheel-sidecar "0.5.8" :exclusions [http-kit,commons-codec]]
+                                  [figwheel-sidecar "0.5.8" :exclusions [http-kit,commons-codec,clj-stacktrace]]
                                   [com.cemerick/piggieback "0.2.2"]]
                    ;; need to add dev source path here to get user.clj loaded
                    :source-paths ["src" "dev"]
