@@ -19,7 +19,8 @@
           (let [[msg-type & payload] message
                 event                (event-type msg-type)]
             (dispatch [event payload])
-            (println event payload)
+            (when config/debug?
+              (println event payload))
             (when (= event :plays)
               (<! (timeout 1100)))))
         (dispatch [:ws-error error]))
