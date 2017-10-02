@@ -158,7 +158,7 @@
                        [:button.btn.btn-primary.btn-lg {:type "button" :on-click #(dispatch [:user-logout])} "Logout"]]]
        [:p])]))
 
-(defn play-page [state]
+(defn play-page []
   (let [state (subscribe [:play-page])]
     (fn []
       (let [{:keys [cards players username plays game-type points score total prompt last-game? last-game-player disconnected-player winner-player saved]} @state
